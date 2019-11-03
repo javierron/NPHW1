@@ -1,11 +1,17 @@
 public class State {
 
+    enum GameState {
+        LOGIN,
+        PLAYING,
+        WIN,
+        LOSE
+    }
+
     String word;
     boolean[] guessedPositions;
     int remainingAtempts;
     int score;
-    boolean playing = false;
-
+    GameState state;
 
     public String getWord(){
         return word;
@@ -24,21 +30,29 @@ public class State {
     }
     
     public boolean isPlaying(){
-        return this.playing;
+        return state == GameState.PLAYING;
     }
 
-    public void startGame() {
-        this.word = "word";
+    public boolean isWin(){
+        return state == GameState.WIN;
+    }
+
+    public boolean isLose(){
+        return state == GameState.LOSE;
+    }
+
+    public void startGame(String word) {
+        this.word = word;
         int len = this.word.length();
         this.guessedPositions = new boolean[len];
         this.remainingAtempts = len;
-        this.score = 0;
-        this.playing = true;
+        this.state = GameState.PLAYING;
     }
 
     public void guess(char x){
-        for (int i = 0; i < word.length(); i++) {
-            this.guessedPositions[i] = this.guessedPositions[i] || x == word.charAt(i);
+        String wordLower = word.toLowerCase();
+        for (int i = 0; i < wordLower.length(); i++) {
+            this.guessedPositions[i] = this.guessedPositions[i] || x == wordLower.charAt(i);
         }
 
         this.remainingAtempts = this.remainingAtempts - 1;
@@ -51,34 +65,30 @@ public class State {
         
         if(win){
             this.score = this.score + 1;
-            this.playing = false;
-        }
-
-        boolean lose = this.remainingAtempts <= 0 && !win;
-
-        if(lose){
+            this.state = GameState.WIN;
+        }else if(this.remainingAtempts <= 0){
             this.score = score - 1;
-            this.playing = false;
+            this.state = GameState.LOSE;
         }
     }
 
     public void guess(String x){
-        
 
         this.remainingAtempts = this.remainingAtempts - 1;
 
-        boolean win = x.equals(this.word);
+        boolean win = x.toLowerCase().equals(this.word.toLowerCase());
         
         if(win){
             this.score = score + 1;
-            this.playing = false;
-        }
+            this.state = GameState.WIN;
 
-        boolean lose = this.remainingAtempts <= 0;
+            for (int i = 0; i < guessedPositions.length; i++) {
+                guessedPositions[i] = true;
+            }
 
-        if(lose){
+        }else if(this.remainingAtempts <= 0){
             this.score = score - 1;
-            this.playing = false;
+            this.state = GameState.LOSE;
         }
     }
 

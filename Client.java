@@ -1,72 +1,53 @@
 import java.net.*;
 import java.util.UUID;
-import java.io.*;
 
-/**
- * Client
- */
 public class Client {
 
+    static class Credentials {
+        protected final UUID uuid = UUID.randomUUID();
+        protected String jwt = null;
+    }
+    
+
     public static void main(String[] args) {
-        System.out.println("Initiated client!");
+        System.out.println("Hangman game!");
 
-        UUID uuid = UUID.randomUUID();
+        Credentials cred = new Credentials();
+
         boolean exit = false;
-        try {
 
-            System.out.println("Hangman game!");
-            
-            while (!exit) {
+        while (!exit) {
+            try {
+                
                 Socket clientSocket = new Socket("localhost", 8080);
-                System.out.println("Write your action: ");
+                String request = Utils.readInput();
 
-                String request = readInput();
-
-                Thread t = new Thread(new RequestThread(uuid, clientSocket, request));
-                t.start();
-
-                if ("exit".equals(request.toLowerCase())) {
-                    exit = true;
+                if ("exit".equals(request)) {
                     break;
                 }
+                
+                Thread t = new Thread(new RequestThread(cred, clientSocket, request));
+                t.start();
+            }catch (ConnectException e) {
+                System.out.println("unable to connect to server");
+                break;
+            } 
+            catch (Exception e) {
+                e.printStackTrace();
             }
-        } catch (Exception e) {
-            e.printStackTrace();
         }
-    }
-
-    static String readInput() throws IOException {
-        BufferedReader consoleReader = new BufferedReader(new InputStreamReader(System.in));
-        return consoleReader.readLine();
-    }
-
-    static void sendMessage(String request, UUID uuid, Socket clientSocket) throws IOException {
-
-        Request reqObj = new Request(uuid, "jwt", request);
-        byte[] serialized = Utils.serialize(reqObj);
-        
-        DataOutputStream out = new DataOutputStream(clientSocket.getOutputStream());
-        
-        out.writeInt(serialized.length);
-        out.write(serialized);
-        out.flush();
-    }
- 
-    static Response receiveMessage(Socket clientSocket) throws IOException, ClassNotFoundException{
-        ObjectInputStream in = new ObjectInputStream(clientSocket.getInputStream());
-        return (Response)in.readObject();
     }
 }
 
 
 class RequestThread implements Runnable {
 
-    UUID uuid;
+    Client.Credentials cred;
     Socket clientSocket;
     String request;
 
-    public RequestThread(UUID uuid, Socket clientSocket, String request) {
-        this.uuid = uuid;
+    public RequestThread(Client.Credentials cred, Socket clientSocket, String request) {
+        this.cred = cred;
         this.clientSocket = clientSocket;
         this.request = request;
     }
@@ -75,15 +56,33 @@ class RequestThread implements Runnable {
     public void run() {
 
         try {
-            Client.sendMessage(request, uuid, clientSocket);
-            Response resp = Client.receiveMessage(clientSocket);
+            Utils.sendRequest(request, cred.uuid, cred.jwt, clientSocket);
+            Response resp = Utils.receiveResponse(clientSocket);
         
             clientSocket.close();
 
-            if (resp.wordLength < 0){
+            System.out.println(resp.wordLength);
+
+            if (resp.wordLength == -1 || resp.wordLength == -5 || resp.wordLength == -6 || resp.wordLength == -7){
                 System.out.println("There was an error processing your request, please try again");
                 return;
             } 
+
+            if (resp.wordLength == -2){
+                System.out.println("Correct! The word was \"" + String.valueOf(resp.guessedLetters) +"\", your score is now: " + resp.score);
+                return;
+            } 
+
+            if (resp.wordLength == -3){
+                System.out.println("Incorect! The word was \"" + String.valueOf(resp.guessedLetters) +"\", your score is now: " + resp.score);
+                return;
+            }
+
+            if (resp.wordLength == -4){
+                System.out.println("Logged in! type 'start game' to start playing! \"");
+                this.cred.jwt = String.valueOf(resp.guessedLetters);
+                return;
+            }
             
             char[] word = new char[resp.wordLength];
             for (int i = 0; i < word.length; i++) {
