@@ -1,6 +1,8 @@
 import java.net.*;
 import java.util.Date;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import com.auth0.jwt.*;
 import com.auth0.jwt.algorithms.*;
@@ -8,6 +10,9 @@ import com.auth0.jwt.exceptions.JWTVerificationException;
 
 public class Server {
     public static void main(String[] args) {
+
+        ExecutorService pool = Executors.newFixedThreadPool(8);
+
         try {
 
             JWTCreator.Builder jwtBuilder = JWT.create();
@@ -23,8 +28,8 @@ public class Server {
                 try {
                     Socket clientSocket = serverSocket.accept();
                     
-                    Thread t = new Thread(new ResponseThread(clientSocket, store, jwtBuilder));
-                    t.start();
+                    pool.execute(new ResponseThread(clientSocket, store, jwtBuilder));
+
                 }catch(Exception e ){
 
                     System.out.println("Client disconnected");
@@ -33,6 +38,7 @@ public class Server {
             }
 
             serverSocket.close();
+            pool.shutdown();
 
         } catch (Exception e) {
             e.printStackTrace();
