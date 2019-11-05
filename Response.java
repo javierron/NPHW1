@@ -11,7 +11,8 @@ public class Response implements Serializable {
         INVALID_JWT_RESPONSE,
         NOTLOGGED_RESPONSE,
         ALREADY_LOGGED_RESPONSE,
-        GUESS_RESPONSE
+        GUESS_RESPONSE,
+        INVALID_PASSOWORD
 
     }
 

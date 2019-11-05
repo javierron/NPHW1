@@ -95,6 +95,11 @@ public class Server {
     public static Response alreadyLoggedInResponse(){
         return new Response(Response.ResponseCode.ALREADY_LOGGED_RESPONSE,0, null,null, 0, 0);
     }
+
+    public static Response invalidPassword(){
+        return new Response(Response.ResponseCode.INVALID_PASSOWORD,0, null,null, 0, 0);
+    }
+
 }
 
 class ResponseThread implements Runnable {
@@ -123,7 +128,7 @@ class ResponseThread implements Runnable {
 
             State state = null;
 
-            String password = "SuperSecurePassword";
+            String correct_password = "password";
 
             if(request.toLowerCase().startsWith("login ")){ // "login username password"
                 
@@ -139,10 +144,18 @@ class ResponseThread implements Runnable {
                     return;
                 }
                 String username = loginRequest[1];
+                String password = loginRequest[2];
 
-                //assume correct password
+                if(!password.equals(correct_password)){
+                    Utils.sendResponse(Server.invalidPassword(), clientSocket);
+                    return;
+                }
+
+
+                //we need to check the correct password
                 String newjwt = jwtBuilder.withClaim("user", username).withIssuedAt(new Date(System.currentTimeMillis())).sign(Algorithm.HMAC256("secret")); 
-                
+
+                //After successfully logged in, the state is created
                 state = new State();
                 store.setState(uuid, state);
 
@@ -152,6 +165,8 @@ class ResponseThread implements Runnable {
             }else if("start game".equals(request.toLowerCase())){
 
                 state = store.getState(uuid);
+
+                //Make sure the state is created before start game.
                 if(state == null || jwt == null){
                     Utils.sendResponse(Server.notLoggedInResponse(), clientSocket);
                     return;
@@ -173,7 +188,8 @@ class ResponseThread implements Runnable {
             } else {
 
                 state = store.getState(uuid);
-                
+
+                //To make sure the state is created before playing, and jwt exists.
                 if(jwt == null || state == null || !state.isPlaying()){ 
                     Utils.sendResponse(Server.errorResponse(), clientSocket);
                     return;

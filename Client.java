@@ -67,12 +67,12 @@ class RequestThread implements Runnable {
         
             clientSocket.close();
 
-            if (resp.responseCode == Response.ResponseCode.ERROR_RESPONSE || resp.wordLength == -7){
+            if (resp.responseCode == Response.ResponseCode.ERROR_RESPONSE){
                 System.out.println("There was an error processing your request, please try again");
                 return;
             }
             else if(resp.responseCode == Response.ResponseCode.INVALID_JWT_RESPONSE){
-                System.out.println("There was an error, invail jwt username and password, please try again");
+                System.out.println("There was an error, invalid jwt response, please try again");
                 return;
             }
             else if(resp.responseCode == Response.ResponseCode.NOTLOGGED_RESPONSE){
@@ -88,16 +88,26 @@ class RequestThread implements Runnable {
             else if (resp.responseCode == Response.ResponseCode.WIN_RESPONSE){
                 System.out.println("Correct! The word was \"" + String.valueOf(resp.guessedLetters) +"\", your score is now: " + resp.score);
                 return;
-            } 
+            }
 
-            if (resp.responseCode == Response.ResponseCode.LOSE_RESPONSE){
+
+            else if (resp.responseCode == Response.ResponseCode.LOSE_RESPONSE){
                 System.out.println("Incorect! The word was \"" + String.valueOf(resp.guessedLetters) +"\", your score is now: " + resp.score);
                 return;
             }
 
+            else if(resp.responseCode == Response.ResponseCode.INVALID_PASSOWORD){
+                System.out.println("There was an error, you need to use the password \"password\" ");
+                return;
+            }
+
+
+            /* with the login response, login succeeds, jwt is stored
+
+             */
             if (resp.responseCode == Response.ResponseCode.LOGIN_RESPONSE){
                 System.out.println("Logged in! type 'start game' to start playing! \"");
-                this.cred.jwt = String.valueOf(resp.guessedLetters); //hack
+                this.cred.jwt = String.valueOf(resp.guessedLetters);
                 return;
             }
             
