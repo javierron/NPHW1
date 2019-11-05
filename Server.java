@@ -122,6 +122,9 @@ class ResponseThread implements Runnable {
             UUID uuid = reqObj.id;
 
             State state = null;
+
+            String password = "SuperSecurePassword";
+
             if(request.toLowerCase().startsWith("login ")){ // "login username password"
                 
                 String[] loginRequest = request.split(" ");
@@ -155,14 +158,10 @@ class ResponseThread implements Runnable {
                 }
 
                 try {
-                    System.out.println(1);
                     Algorithm algorithm = Algorithm.HMAC256("secret");
                     JWTVerifier verifier = JWT.require(algorithm).build();
-                    System.out.println(verifier);
                     verifier.verify(jwt);
-                    System.out.println(2);
                 } catch (JWTVerificationException exception){
-                    System.out.println(3);
                     Utils.sendResponse(Server.invalidJwtResponse(), clientSocket);
                     return;
                 }

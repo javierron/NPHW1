@@ -25,8 +25,6 @@ public class Utils {
 
     static void sendRequest(String request, UUID uuid, String jwt, Socket clientSocket) throws IOException {
 
-        System.out.println(jwt);
-
         Request reqObj = new Request(uuid, jwt, request);
         byte[] serialized = Utils.serialize(reqObj);
         

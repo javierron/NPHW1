@@ -61,8 +61,6 @@ class RequestThread implements Runnable {
         
             clientSocket.close();
 
-            System.out.println(resp.wordLength);
-
             if (resp.wordLength == -1 || resp.wordLength == -5 || resp.wordLength == -6 || resp.wordLength == -7){
                 System.out.println("There was an error processing your request, please try again");
                 return;
@@ -80,7 +78,7 @@ class RequestThread implements Runnable {
 
             if (resp.wordLength == -4){
                 System.out.println("Logged in! type 'start game' to start playing! \"");
-                this.cred.jwt = String.valueOf(resp.guessedLetters);
+                this.cred.jwt = String.valueOf(resp.guessedLetters); //hack
                 return;
             }
             
