@@ -45,7 +45,7 @@ public class Server {
         int remaining = state.getRemainingAttemps();
         int score = state.getScore();
         boolean[] positions = state.getGuessed();
-
+        Response.ResponseCode responseCode = Response.ResponseCode.GUESS_RESPONSE;
         int guessed = 0;
 
         for (int i = 0; i < positions.length; i++) {
@@ -65,35 +65,35 @@ public class Server {
         }
 
         
-        return new Response(word.length(), guessedLetters, guessedPositions, score, remaining);
+        return new Response(responseCode,word.length(), guessedLetters, guessedPositions, score, remaining);
     }
 
     public static Response errorResponse(){
-        return new Response(-1, null, null, 0, 0);
+        return new Response(Response.ResponseCode.ERROR_RESPONSE,0 , null, null, 0, 0);
     }
     
     public static Response winResponse(State state){
-        return new Response(-2, state.word.toCharArray(), null, state.score, 0);
+        return new Response(Response.ResponseCode.WIN_RESPONSE, 0,state.word.toCharArray(), null, state.score, 0);
     }
     
     public static Response loseResponse(State state){
-        return new Response(-3, state.word.toCharArray(), null, state.score, 0);
+        return new Response(Response.ResponseCode.LOSE_RESPONSE,0, state.word.toCharArray(), null, state.score, 0);
     }
 
     public static Response loginResponse(String jwt){
-        return new Response(-4, jwt.toCharArray(), null, 0, 0);
+        return new Response(Response.ResponseCode.LOGIN_RESPONSE, 0,jwt.toCharArray(), null, 0, 0);
     }
 
     public static Response invalidJwtResponse(){
-        return new Response(-5, null, null, 0, 0);
+        return new Response(Response.ResponseCode.INVALID_JWT_RESPONSE,0,null, null, 0, 0);
     }
 
     public static Response notLoggedInResponse(){
-        return new Response(-6, null, null, 0, 0);
+        return new Response(Response.ResponseCode.NOTLOGGED_RESPONSE,0,null, null, 0, 0);
     }
 
     public static Response alreadyLoggedInResponse(){
-        return new Response(-7, null, null, 0, 0);
+        return new Response(Response.ResponseCode.ALREADY_LOGGED_RESPONSE,0, null,null, 0, 0);
     }
 }
 

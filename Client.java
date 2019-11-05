@@ -1,6 +1,12 @@
 import java.net.*;
 import java.util.UUID;
 
+/* Gaming logic:
+After both start the client and server, user should input "login username password"
+then "start game"
+then make guessing following "guess xxx"
+ */
+
 public class Client {
 
     static class Credentials {
@@ -61,22 +67,35 @@ class RequestThread implements Runnable {
         
             clientSocket.close();
 
-            if (resp.wordLength == -1 || resp.wordLength == -5 || resp.wordLength == -6 || resp.wordLength == -7){
+            if (resp.responseCode == Response.ResponseCode.ERROR_RESPONSE || resp.wordLength == -7){
                 System.out.println("There was an error processing your request, please try again");
                 return;
-            } 
+            }
+            else if(resp.responseCode == Response.ResponseCode.INVALID_JWT_RESPONSE){
+                System.out.println("There was an error, invail jwt username and password, please try again");
+                return;
+            }
+            else if(resp.responseCode == Response.ResponseCode.NOTLOGGED_RESPONSE){
+                System.out.println("There was an error that you didn't logged in, please try again");
+                return;
+            }
 
-            if (resp.wordLength == -2){
+            else if(resp.responseCode == Response.ResponseCode.ALREADY_LOGGED_RESPONSE){
+                System.out.println("There was an error that you have already logged in, please try again");
+                return;
+            }
+
+            else if (resp.responseCode == Response.ResponseCode.WIN_RESPONSE){
                 System.out.println("Correct! The word was \"" + String.valueOf(resp.guessedLetters) +"\", your score is now: " + resp.score);
                 return;
             } 
 
-            if (resp.wordLength == -3){
+            if (resp.responseCode == Response.ResponseCode.LOSE_RESPONSE){
                 System.out.println("Incorect! The word was \"" + String.valueOf(resp.guessedLetters) +"\", your score is now: " + resp.score);
                 return;
             }
 
-            if (resp.wordLength == -4){
+            if (resp.responseCode == Response.ResponseCode.LOGIN_RESPONSE){
                 System.out.println("Logged in! type 'start game' to start playing! \"");
                 this.cred.jwt = String.valueOf(resp.guessedLetters); //hack
                 return;
