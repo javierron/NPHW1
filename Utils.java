@@ -56,7 +56,7 @@ public class Utils {
         byte[] bytes = new byte[reqLength];
         int read = 0;
         while(read < reqLength){
-            read = in.read(bytes, read, reqLength - read);       //bytes[] is somewhere datastream read into  ,  offset ,  length
+            read += in.read(bytes, read, reqLength - read);
         }
         
         return (Response) Utils.deserialize(bytes);
@@ -70,7 +70,7 @@ public class Utils {
         byte[] bytes = new byte[reqLength];
         int read = 0;
         while(read < reqLength){
-            read = in.read(bytes, read, reqLength - read);
+            read += in.read(bytes, read, reqLength - read);
         }
         
         return (Request) Utils.deserialize(bytes);
