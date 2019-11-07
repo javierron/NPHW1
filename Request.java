@@ -15,3 +15,4 @@ public class Request implements Serializable {
     public final String jwt;
     public final String requestString;
 }
+/* This is the object class for client to send message to server */
