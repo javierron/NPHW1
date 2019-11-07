@@ -3,12 +3,14 @@ import java.net.Socket;
 import java.util.UUID;
 
 public class Utils {
+    //data stream to object stream
     public static Object deserialize(byte[] data) throws IOException, ClassNotFoundException {
         ByteArrayInputStream in = new ByteArrayInputStream(data);
         ObjectInputStream is = new ObjectInputStream(in);
         return is.readObject();
     }
 
+    // object stream to data stream
     public static byte[] serialize(Object obj) throws IOException {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         ObjectOutputStream os = new ObjectOutputStream(out);
@@ -54,7 +56,7 @@ public class Utils {
         byte[] bytes = new byte[reqLength];
         int read = 0;
         while(read < reqLength){
-            read = in.read(bytes, read, reqLength - read);
+            read = in.read(bytes, read, reqLength - read);       //bytes[] is somewhere datastream read into  ,  offset ,  length
         }
         
         return (Response) Utils.deserialize(bytes);
