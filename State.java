@@ -49,6 +49,7 @@ public class State {
         this.state = GameState.PLAYING;
     }
 
+    /* single char guess */
     public void guess(char x){
         String wordLower = word.toLowerCase();
         for (int i = 0; i < wordLower.length(); i++) {
@@ -57,6 +58,7 @@ public class State {
 
         this.remainingAtempts = this.remainingAtempts - 1;
 
+        // only for win check when the whole word is guessed correctly
         boolean win = true;
 
         for (int i = 0; i < guessedPositions.length; i++) {
@@ -68,10 +70,11 @@ public class State {
             this.state = GameState.WIN;
         }else if(this.remainingAtempts <= 0){
             this.score = score - 1;
-            this.state = GameState.LOSE;
+            this.state = GameState.LOSE;     //if remaining attempts is smaller than 0 , lose 
         }
     }
 
+    /*whole word guess*/
     public void guess(String x){
 
         this.remainingAtempts = this.remainingAtempts - 1;
