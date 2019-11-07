@@ -2,9 +2,10 @@ import java.net.*;
 import java.util.UUID;
 
 /* Gaming logic:
-After both start the client and server, user should input "login username password"
+After both starting the client and server, users should input "login username password"
 then "start game"
 then make guessing following "guess xxx"
+to exit the game, input "exit"
  */
 
 public class Client {
@@ -28,6 +29,7 @@ public class Client {
                 Socket clientSocket = new Socket("localhost", 8080);
                 String request = Utils.readInput();
 
+                //exit operation
                 if ("exit".equals(request)) {
                     break;
                 }
@@ -111,6 +113,7 @@ class RequestThread implements Runnable {
                 return;
             }
             
+            // if no guessing yet, word is replaced by "-----"
             char[] word = new char[resp.wordLength];
             for (int i = 0; i < word.length; i++) {
                 word[i] = '-';
