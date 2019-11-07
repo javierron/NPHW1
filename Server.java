@@ -11,11 +11,11 @@ import com.auth0.jwt.exceptions.JWTVerificationException;
 public class Server {
     public static void main(String[] args) {
 
-        ExecutorService pool = Executors.newFixedThreadPool(8);
+        ExecutorService pool = Executors.newFixedThreadPool(8);   //Set number of threads for reuse in threadpool
 
         try {
 
-            JWTCreator.Builder jwtBuilder = JWT.create();
+            JWTCreator.Builder jwtBuilder = JWT.create();   //JWT
             
             System.out.println("Initiated server!");
             
@@ -37,6 +37,7 @@ public class Server {
 
             }
 
+            //close the server socket and threadpool when exit
             serverSocket.close();
             pool.shutdown();
 
@@ -53,6 +54,7 @@ public class Server {
         boolean[] positions = state.getGuessed();
         Response.ResponseCode responseCode = Response.ResponseCode.GUESS_RESPONSE;
         int guessed = 0;
+        
 
         for (int i = 0; i < positions.length; i++) {
             if(positions[i]) guessed++; 
@@ -136,22 +138,27 @@ class ResponseThread implements Runnable {
 
             String correct_password = "password";
 
-            if(request.toLowerCase().startsWith("login ")){ // "login username password"
+            if(request.toLowerCase().startsWith("login ")){           // "login username password"
                 
                 String[] loginRequest = request.split(" ");
+                
+                //error response for wrong input
                 if(loginRequest.length != 3) {
                     Utils.sendResponse(Server.errorResponse(), clientSocket);
                     return;
                 }
             
+                //check for already loggedin state
                 state = store.getState(uuid);
                 if(state != null){
                     Utils.sendResponse(Server.alreadyLoggedInResponse(), clientSocket);
                     return;
                 }
+                
                 String username = loginRequest[1];
                 String password = loginRequest[2];
 
+                //check for correct password
                 if(!password.equals(correct_password)){
                     Utils.sendResponse(Server.invalidPassword(), clientSocket);
                     return;
@@ -168,7 +175,7 @@ class ResponseThread implements Runnable {
                 Utils.sendResponse(Server.loginResponse(newjwt), clientSocket);
                 return;
 
-            }else if("start game".equals(request.toLowerCase())){
+            }else if("start game".equals(request.toLowerCase())){   //state start game
 
                 state = store.getState(uuid);
 
@@ -178,6 +185,7 @@ class ResponseThread implements Runnable {
                     return;
                 }
 
+                //jwt check before start game
                 try {
                     Algorithm algorithm = Algorithm.HMAC256("secret");
                     JWTVerifier verifier = JWT.require(algorithm).build();
@@ -191,7 +199,7 @@ class ResponseThread implements Runnable {
                 state.startGame(store.getWord());
                 
 
-            } else {
+            } else {        //playing state
 
                 state = store.getState(uuid);
 
@@ -201,6 +209,7 @@ class ResponseThread implements Runnable {
                     return;
                 }
 
+                //check for jwt
                 try {
                     Algorithm algorithm = Algorithm.HMAC256("secret");
                     JWTVerifier verifier = JWT.require(algorithm).build();
@@ -211,6 +220,8 @@ class ResponseThread implements Runnable {
                 }
 
                 String[] guessRequest = request.split(" ");
+                
+                //check guess operation should always be "guess xxx"
                 if(guessRequest.length != 2 || !"guess".equals(guessRequest[0].toLowerCase())){
                     System.out.println("unrecognized request");
                     Utils.sendResponse(Server.errorResponse(), clientSocket);
