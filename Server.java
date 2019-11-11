@@ -1,5 +1,11 @@
 import java.net.*;
+import java.nio.ByteBuffer;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
+import java.nio.channels.ServerSocketChannel;
+import java.nio.channels.SocketChannel;
 import java.util.Date;
+import java.util.Iterator;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -9,7 +15,145 @@ import com.auth0.jwt.algorithms.*;
 import com.auth0.jwt.exceptions.JWTVerificationException;
 
 public class Server {
+
     public static void main(String[] args) {
+        ServerSocketChannel serverChannel;
+        Selector selector;
+   
+        System.out.println("initializing server");
+        
+        try {
+            // This is how you open a ServerSocketChannel
+            serverChannel = ServerSocketChannel.open();
+            // You MUST configure as non-blocking or else you cannot register the serverChannel to the Selector.
+            serverChannel.configureBlocking(false);
+            // bind to the address that you will use to Serve.
+            serverChannel.socket().bind(new InetSocketAddress("localhost", 8080));
+
+            // This is how you open a Selector
+            selector = Selector.open();
+            /*
+             * Here you are registering the serverSocketChannel to accept connection, thus the OP_ACCEPT.
+             * This means that you just told your selector that this channel will be used to accept connections.
+             * We can change this operation later to read/write, more on this later.
+             */
+            serverChannel.register(selector, SelectionKey.OP_ACCEPT);
+        
+    
+            System.out.println("Now accepting connections...");
+            // A run the server as long as the thread is not interrupted.
+            while (!Thread.currentThread().isInterrupted()) {
+                /*
+                 * selector.select(TIMEOUT) is waiting for an OPERATION to be ready and is a blocking call.
+                 * For example, if a client connects right this second, then it will break from the select()
+                 * call and run the code below it. The TIMEOUT is not needed, but its just so it doesn't
+                 * block undefinable.
+                 */
+                selector.select(50000);
+
+                /*
+                 * If we are here, it is because an operation happened (or the TIMEOUT expired).
+                 * We need to get the SelectionKeys from the selector to see what operations are available.
+                 * We use an iterator for this.
+                 */
+                Iterator<SelectionKey> keys = selector.selectedKeys().iterator();
+
+                while (keys.hasNext()) {
+                    SelectionKey key = keys.next();
+                    // remove the key so that we don't process this OPERATION again.
+                    keys.remove();
+
+                    // key could be invalid if for example, the client closed the connection.
+                    if (!key.isValid()) {
+                        continue;
+                    }
+                    /*
+                     * In the server, we start by listening to the OP_ACCEPT when we register with the Selector.
+                     * If the key from the keyset is Acceptable, then we must get ready to accept the client
+                     * connection and do something with it. Go read the comments in the accept method.
+                     */
+                    if (key.isAcceptable()) {
+                        System.out.println("Accepting connection");
+                        //accept(key);
+                        ServerSocketChannel server = (ServerSocketChannel) key.channel();
+                        SocketChannel channel = server.accept();
+
+                        channel.configureBlocking(false);
+                        channel.register(selector, SelectionKey.OP_READ, ByteBuffer.allocate(1024));
+                    }
+                    /*
+                     * If you already read the comments in the accept() method, then you know we changed
+                     * the OPERATION to OP_WRITE. This means that one of these keys in the iterator will return
+                     * a channel that is writable (key.isWritable()). The write() method will explain further.
+                     */
+                    if (key.isWritable()) {
+                        SocketChannel channel = (SocketChannel) key.channel();
+                        /*
+                        * The HashMap contains the object SocketChannel along with the information in it to be written.
+                        * In this example, we send the "Hello from server" String and also an echo back to the client.
+                        * This is what the HashMap is for, to keep track of the messages to be written and their socketChannels.
+                        */
+                        byte[] data = "the response".getBytes();
+
+                        // Something to notice here is that reads and writes in NIO go directly to the channel and in form of
+                        // a buffer.
+
+                        channel.write(ByteBuffer.wrap(data));
+                        System.out.println("Wrote response");
+                        // Since we wrote, then we should register to read next, since that is the most logical thing
+                        // to happen next. YOU DO NOT HAVE TO DO THIS. But I am doing it for the purpose of the example
+                        // Usually if you register once for a read/write/connect/accept, you never have to register
+                        // again for that unless you register for none (0).
+                        // Like it said, I am doing it here for the purpose of the example. The same goes for all others.
+                        key.interestOps(SelectionKey.OP_READ);
+                        System.out.println("exit write");
+                    }
+                    /*
+                     * If you already read the comments in the write method then you understand that we registered
+                     * the OPERATION OP_READ. That means that on the next Selector.select(), there is probably a key
+                     * that is ready to read (key.isReadable()). The read() method will explain further.
+                     */
+                    if (key.isReadable()) {
+                        SocketChannel channel = (SocketChannel) key.channel();
+                        ByteBuffer readBuffer = ByteBuffer.allocate(1024);
+                        readBuffer.clear();
+
+                        int read = -1;
+                        try {
+                            read = channel.read(readBuffer);
+                        } catch (Exception e) {
+                //            System.out.println("Reading problem, closing connection");
+                           // e.printStackTrace();
+                            key.cancel();
+                            channel.close();
+                            continue;
+                        }
+
+                        if (read == -1) {
+                            System.out.println("Nothing was there to be read, closing connection");
+                            channel.close();
+                            key.cancel();
+                            continue;
+                        }
+                        // IMPORTANT - don't forget the flip() the buffer. It is like a reset without clearing it.
+                        readBuffer.flip();
+                        byte[] data = new byte[1000];
+                        readBuffer.get(data, 0, read);
+                        System.out.println("Received: " + new String(data));
+                        key.interestOps(SelectionKey.OP_WRITE);
+
+                    }
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+
+    public static void main2(String[] args) {
+
+
 
         ExecutorService pool = Executors.newFixedThreadPool(8);   //Set number of threads for reuse in threadpool
 

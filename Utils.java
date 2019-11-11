@@ -52,12 +52,11 @@ public class Utils {
 
         DataInputStream in = new DataInputStream(clientSocket.getInputStream());
 
-        int reqLength = in.readInt();
-        byte[] bytes = new byte[reqLength];
-        int read = 0;
-        while(read < reqLength){
-            read += in.read(bytes, read, reqLength - read);
-        }
+        //int reqLength = in.readInt();
+        byte[] bytes = new byte[64];
+       // while(read < 1024){
+            in.readFully(bytes);
+        //}
         
         return (Response) Utils.deserialize(bytes);
     }

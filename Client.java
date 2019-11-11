@@ -1,4 +1,10 @@
+import java.io.IOException;
 import java.net.*;
+import java.nio.ByteBuffer;
+import java.nio.channels.Channel;
+import java.nio.channels.Channels;
+import java.nio.channels.SocketChannel;
+import java.nio.channels.WritableByteChannel;
 import java.util.UUID;
 
 /* Gaming logic:
@@ -14,9 +20,41 @@ public class Client {
         protected final UUID uuid = UUID.randomUUID();
         protected String jwt = null;
     }
-    
 
     public static void main(String[] args) {
+        InetSocketAddress hostAddress = new InetSocketAddress("localhost", 8080);
+        SocketChannel client;
+        try {
+            client = SocketChannel.open(hostAddress);
+            client.configureBlocking(false);
+            String threadName = Thread.currentThread().getName();
+
+            // Send messages to server
+            String messages = "LOGIN";
+
+            System.out.println(threadName + " started");
+
+            ByteBuffer buffer = ByteBuffer.allocate(74);
+            buffer.put(messages.getBytes());
+            buffer.flip();
+            client.write(buffer);
+            System.out.println(messages);
+            
+            buffer = ByteBuffer.allocate(1024);
+
+            WritableByteChannel out = Channels.newChannel(System.out);
+
+            while (buffer.hasRemaining() && client.read(buffer) != -1){
+                buffer.flip();
+                out.write(buffer);
+            }
+        } catch (Exception e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+    }
+
+    public static void main2(String[] args) {
         System.out.println("Hangman game!");
 
         Credentials cred = new Credentials();
@@ -67,6 +105,9 @@ class RequestThread implements Runnable {
             Utils.sendRequest(request, cred.uuid, cred.jwt, clientSocket);
             Response resp = Utils.receiveResponse(clientSocket);
         
+
+            System.out.println(resp.responseCode);
+
             clientSocket.close();
 
             if (resp.responseCode == Response.ResponseCode.ERROR_RESPONSE){
