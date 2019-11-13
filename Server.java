@@ -1,3 +1,4 @@
+import java.io.IOException;
 import java.net.*;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
@@ -13,16 +14,30 @@ import java.util.concurrent.Executors;
 import com.auth0.jwt.*;
 import com.auth0.jwt.algorithms.*;
 import com.auth0.jwt.exceptions.JWTVerificationException;
+import jdk.jshell.execution.Util;
 
 public class Server {
+
+    private static Store store;
+    private static Response resObj;
+    private static JWTCreator.Builder jwtBuilder;
 
     public static void main(String[] args) {
         ServerSocketChannel serverChannel;
         Selector selector;
-   
+
         System.out.println("initializing server");
-        
+
         try {
+            //JWT
+            jwtBuilder = JWT.create();
+
+            System.out.println("Initiated server!");
+
+            boolean exit = false;
+            store = new Store();
+
+
             // This is how you open a ServerSocketChannel
             serverChannel = ServerSocketChannel.open();
             // You MUST configure as non-blocking or else you cannot register the serverChannel to the Selector.
@@ -38,8 +53,8 @@ public class Server {
              * We can change this operation later to read/write, more on this later.
              */
             serverChannel.register(selector, SelectionKey.OP_ACCEPT);
-        
-    
+
+
             System.out.println("Now accepting connections...");
             // A run the server as long as the thread is not interrupted.
             while (!Thread.currentThread().isInterrupted()) {
@@ -87,26 +102,30 @@ public class Server {
                      * a channel that is writable (key.isWritable()). The write() method will explain further.
                      */
                     if (key.isWritable()) {
+
+
                         SocketChannel channel = (SocketChannel) key.channel();
+
+                        Utils.sendResponse(resObj, channel);
                         /*
-                        * The HashMap contains the object SocketChannel along with the information in it to be written.
-                        * In this example, we send the "Hello from server" String and also an echo back to the client.
-                        * This is what the HashMap is for, to keep track of the messages to be written and their socketChannels.
-                        */
-                        byte[] data = "the response".getBytes();
+                         * The HashMap contains the object SocketChannel along with the information in it to be written.
+                         * In this example, we send the "Hello from server" String and also an echo back to the client.
+                         * This is what the HashMap is for, to keep track of the messages to be written and their socketChannels.
+                         */
+                        //byte[] data = "the response".getBytes();
 
                         // Something to notice here is that reads and writes in NIO go directly to the channel and in form of
                         // a buffer.
 
-                        channel.write(ByteBuffer.wrap(data));
-                        System.out.println("Wrote response");
+                        //channel.write(ByteBuffer.wrap(data));
+                        //System.out.println("Wrote response");
                         // Since we wrote, then we should register to read next, since that is the most logical thing
                         // to happen next. YOU DO NOT HAVE TO DO THIS. But I am doing it for the purpose of the example
                         // Usually if you register once for a read/write/connect/accept, you never have to register
                         // again for that unless you register for none (0).
                         // Like it said, I am doing it here for the purpose of the example. The same goes for all others.
-                        key.interestOps(SelectionKey.OP_READ);
-                        System.out.println("exit write");
+                        //key.interestOps(SelectionKey.OP_READ);
+                        //System.out.println("exit write");
                     }
                     /*
                      * If you already read the comments in the write method then you understand that we registered
@@ -118,7 +137,10 @@ public class Server {
                         ByteBuffer readBuffer = ByteBuffer.allocate(1024);
                         readBuffer.clear();
 
-                        int read = -1;
+                        resObj = responseAction(channel, key);
+
+
+  /*                      int read = -1;
                         try {
                             read = channel.read(readBuffer);
                         } catch (Exception e) {
@@ -142,6 +164,8 @@ public class Server {
                         System.out.println("Received: " + new String(data));
                         key.interestOps(SelectionKey.OP_WRITE);
 
+   */
+
                     }
                 }
             }
@@ -150,58 +174,60 @@ public class Server {
         }
     }
 
+    /*
+        public static void main2(String[] args) {
 
-    public static void main2(String[] args) {
 
 
+            ExecutorService pool = Executors.newFixedThreadPool(8);   //Set number of threads for reuse in threadpool
 
-        ExecutorService pool = Executors.newFixedThreadPool(8);   //Set number of threads for reuse in threadpool
+            try {
 
-        try {
-
-            JWTCreator.Builder jwtBuilder = JWT.create();   //JWT
+                JWTCreator.Builder jwtBuilder = JWT.create();   //JWT
             
-            System.out.println("Initiated server!");
+                System.out.println("Initiated server!");
             
-            boolean exit = false;
-            Store store = new Store();
-            ServerSocket serverSocket = new ServerSocket(8080);
+                boolean exit = false;
+                Store store = new Store();
+                ServerSocket serverSocket = new ServerSocket(8080);
             
-            while (!exit) {
+                while (!exit) {
             
-                try {
-                    Socket clientSocket = serverSocket.accept();
+                    try {
+                        Socket clientSocket = serverSocket.accept();
                     
-                    pool.execute(new ResponseThread(clientSocket, store, jwtBuilder));
+                        pool.execute(new ResponseThread(clientSocket, store, jwtBuilder));
 
-                }catch(Exception e ){
+                    }catch(Exception e ){
 
-                    System.out.println("Client disconnected");
+                        System.out.println("Client disconnected");
+                    }
+
                 }
 
+                //close the server socket and threadpool when exit
+                serverSocket.close();
+                pool.shutdown();
+
+            } catch (Exception e) {
+                e.printStackTrace();
             }
-
-            //close the server socket and threadpool when exit
-            serverSocket.close();
-            pool.shutdown();
-
-        } catch (Exception e) {
-            e.printStackTrace();
         }
-    }
 
-    public static Response stateToResponse(State state){
-        
+
+     */
+    public static Response stateToResponse(State state) {
+
         String word = state.getWord();
         int remaining = state.getRemainingAttemps();
         int score = state.getScore();
         boolean[] positions = state.getGuessed();
         Response.ResponseCode responseCode = Response.ResponseCode.GUESS_RESPONSE;
         int guessed = 0;
-        
+
 
         for (int i = 0; i < positions.length; i++) {
-            if(positions[i]) guessed++; 
+            if (positions[i]) guessed++;
         }
 
         int idx = 0;
@@ -209,51 +235,199 @@ public class Server {
         int[] guessedPositions = new int[guessed];
 
         for (int i = 0; i < positions.length; i++) {
-            if(positions[i]){
+            if (positions[i]) {
                 guessedLetters[idx] = word.charAt(i);
                 guessedPositions[idx] = i;
                 idx++;
             }
         }
 
-        
-        return new Response(responseCode,word.length(), guessedLetters, guessedPositions, score, remaining);
+
+        return new Response(responseCode, word.length(), guessedLetters, guessedPositions, score, remaining);
     }
 
-    public static Response errorResponse(){
-        return new Response(Response.ResponseCode.ERROR_RESPONSE,0 , null, null, 0, 0);
-    }
-    
-    public static Response winResponse(State state){
-        return new Response(Response.ResponseCode.WIN_RESPONSE, 0,state.word.toCharArray(), null, state.score, 0);
-    }
-    
-    public static Response loseResponse(State state){
-        return new Response(Response.ResponseCode.LOSE_RESPONSE,0, state.word.toCharArray(), null, state.score, 0);
+    public static Response errorResponse() {
+        return new Response(Response.ResponseCode.ERROR_RESPONSE, 0, null, null, 0, 0);
     }
 
-    public static Response loginResponse(String jwt){
-        return new Response(Response.ResponseCode.LOGIN_RESPONSE, 0,jwt.toCharArray(), null, 0, 0);
+    public static Response winResponse(State state) {
+        return new Response(Response.ResponseCode.WIN_RESPONSE, 0, state.word.toCharArray(), null, state.score, 0);
     }
 
-    public static Response invalidJwtResponse(){
-        return new Response(Response.ResponseCode.INVALID_JWT_RESPONSE,0,null, null, 0, 0);
+    public static Response loseResponse(State state) {
+        return new Response(Response.ResponseCode.LOSE_RESPONSE, 0, state.word.toCharArray(), null, state.score, 0);
     }
 
-    public static Response notLoggedInResponse(){
-        return new Response(Response.ResponseCode.NOTLOGGED_RESPONSE,0,null, null, 0, 0);
+    public static Response loginResponse(String jwt) {
+        return new Response(Response.ResponseCode.LOGIN_RESPONSE, 0, jwt.toCharArray(), null, 0, 0);
     }
 
-    public static Response alreadyLoggedInResponse(){
-        return new Response(Response.ResponseCode.ALREADY_LOGGED_RESPONSE,0, null,null, 0, 0);
+    public static Response invalidJwtResponse() {
+        return new Response(Response.ResponseCode.INVALID_JWT_RESPONSE, 0, null, null, 0, 0);
     }
 
-    public static Response invalidPassword(){
-        return new Response(Response.ResponseCode.INVALID_PASSOWORD,0, null,null, 0, 0);
+    public static Response notLoggedInResponse() {
+        return new Response(Response.ResponseCode.NOTLOGGED_RESPONSE, 0, null, null, 0, 0);
+    }
+
+    public static Response alreadyLoggedInResponse() {
+        return new Response(Response.ResponseCode.ALREADY_LOGGED_RESPONSE, 0, null, null, 0, 0);
+    }
+
+    public static Response invalidPassword() {
+        return new Response(Response.ResponseCode.INVALID_PASSOWORD, 0, null, null, 0, 0);
+    }
+
+
+    static Response responseAction(SocketChannel clientSocket, SelectionKey key) throws IOException, ClassNotFoundException {
+
+        ByteBuffer readBuffer = ByteBuffer.allocate(1024);
+        readBuffer.clear();
+
+
+        Request reqObj = Utils.receiveRequest(clientSocket, key);
+
+        if (reqObj == null) {
+            return errorResponse();
+        }
+
+        String request = reqObj.requestString;
+        String jwt = reqObj.jwt;
+        UUID uuid = reqObj.id;
+
+        State state = null;
+
+        String correct_password = "password";
+
+        if (request.toLowerCase().startsWith("login ")) {           // "login username password"
+
+            String[] loginRequest = request.split(" ");
+
+            //error response for wrong input
+            if (loginRequest.length != 3) {
+                return Server.errorResponse();
+            }
+
+            //check for already loggedin state
+            state = store.getState(uuid);
+            if (state != null) {
+                return Server.alreadyLoggedInResponse();
+
+            }
+
+            String username = loginRequest[1];
+            String password = loginRequest[2];
+
+            //check for correct password
+            if (!password.equals(correct_password)) {
+                return Server.invalidPassword();
+
+            }
+
+
+            //we need to check the correct password
+            String newjwt = jwtBuilder.withClaim("user", username).withIssuedAt(new Date(System.currentTimeMillis())).sign(Algorithm.HMAC256("secret"));
+
+            //After successfully logged in, the state is created
+            state = new State();
+            store.setState(uuid, state);
+
+            return Server.loginResponse(newjwt);
+
+
+        } else if ("start game".equals(request.toLowerCase())) {   //state start game
+
+            state = store.getState(uuid);
+
+            //Make sure the state is created before start game.
+            if (state == null || jwt == null) {
+                return Server.notLoggedInResponse();
+
+            }
+
+            //jwt check before start game
+            try {
+                Algorithm algorithm = Algorithm.HMAC256("secret");
+                JWTVerifier verifier = JWT.require(algorithm).build();
+                verifier.verify(jwt);
+            } catch (JWTVerificationException exception) {
+                return Server.invalidJwtResponse();
+
+            }
+
+            System.out.println("Start game!");
+            state.startGame(store.getWord());
+
+
+        } else {        //playing state
+
+            state = store.getState(uuid);
+
+            //To make sure the state is created before playing, and jwt exists.
+            if (jwt == null || state == null || !state.isPlaying()) {
+                return Server.errorResponse();
+
+            }
+
+            //check for jwt
+            try {
+                Algorithm algorithm = Algorithm.HMAC256("secret");
+                JWTVerifier verifier = JWT.require(algorithm).build();
+                verifier.verify(jwt);
+            } catch (JWTVerificationException exception) {
+                return Server.invalidJwtResponse();
+
+            }
+
+            String[] guessRequest = request.split(" ");
+
+            //check guess operation should always be "guess xxx"
+            if (guessRequest.length != 2 || !"guess".equals(guessRequest[0].toLowerCase())) {
+                System.out.println("unrecognized request");
+                return Server.errorResponse();
+
+            } else if (guessRequest[1].length() == 1) {
+                System.out.println("single char guess request");
+                state.guess(guessRequest[1].charAt(0));
+            } else {
+                System.out.println("whole word guess request");
+                state.guess(guessRequest[1]);
+            }
+        }
+
+
+        Response resp;
+        if (state.isPlaying()) {
+            resp = Server.stateToResponse(state);
+        } else if (state.isWin()) {
+            resp = Server.winResponse(state);
+        } else if (state.isLose()) {
+            resp = Server.loseResponse(state);
+        } else {
+            resp = Server.errorResponse();
+        }
+
+        //clientSocket.close();
+        return resp;
+
+
+
+
+
     }
 
 }
 
+
+
+
+
+
+
+
+
+
+/*
 class ResponseThread implements Runnable {
 
     Socket clientSocket;
@@ -400,4 +574,4 @@ class ResponseThread implements Runnable {
         }
     }
 }
-
+*/

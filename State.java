@@ -28,7 +28,7 @@ public class State {
     public int getScore(){
         return this.score;
     }
-    
+
     public boolean isPlaying(){
         return state == GameState.PLAYING;
     }

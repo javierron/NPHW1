@@ -8,6 +8,7 @@ public class Words {
     ArrayList<String> list;
     Random rand;
 
+    //initialize the word list
     public Words() throws FileNotFoundException {
         this.list = new ArrayList<String>();
         this.rand = new Random();
