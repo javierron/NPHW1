@@ -1,4 +1,5 @@
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.UUID;
 
@@ -7,7 +8,7 @@ public class Store {
     private HashMap<UUID, State> map;
     private Words words;
 
-    public Store() throws FileNotFoundException {
+    public Store() throws FileNotFoundException, IOException {
         this.map = new HashMap<UUID, State>();
         this.words = new Words();
     }
